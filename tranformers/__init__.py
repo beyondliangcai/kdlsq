@@ -32,84 +32,19 @@ if is_sklearn_available():
     from .data import glue_compute_metrics, xnli_compute_metrics
 
 # Tokenizers
-from .tokenization_utils import (PreTrainedTokenizer)
-#from .tokenization_auto import AutoTokenizer
-from .tokenization_bert import BertTokenizer, BasicTokenizer, WordpieceTokenizer
-from .tokenization_openai import OpenAIGPTTokenizer
-from .tokenization_transfo_xl import (TransfoXLTokenizer, TransfoXLCorpus)
-from .tokenization_gpt2 import GPT2Tokenizer
-from .tokenization_ctrl import CTRLTokenizer
-from .tokenization_xlnet import XLNetTokenizer, SPIECE_UNDERLINE
-from .tokenization_xlm import XLMTokenizer
-from .tokenization_roberta import RobertaTokenizer
-from .tokenization_distilbert import DistilBertTokenizer
-from .tokenization_albert import AlbertTokenizer
 #from .tokenization_camembert import CamembertTokenizer
 
 # Configurations
-from .configuration_utils import PretrainedConfig
-from .configuration_auto import AutoConfig
 from .configuration_bert import BertConfig, BERT_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_openai import OpenAIGPTConfig, OPENAI_GPT_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_transfo_xl import TransfoXLConfig, TRANSFO_XL_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_gpt2 import GPT2Config, GPT2_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_ctrl import CTRLConfig, CTRL_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_xlnet import XLNetConfig, XLNET_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_ctrl import CTRLConfig, CTRL_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_xlm import XLMConfig, XLM_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_roberta import RobertaConfig, ROBERTA_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_distilbert import DistilBertConfig, DISTILBERT_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_albert import AlbertConfig, ALBERT_PRETRAINED_CONFIG_ARCHIVE_MAP
-from .configuration_camembert import CamembertConfig, CAMEMBERT_PRETRAINED_CONFIG_ARCHIVE_MAP
-
 # Modeling
 if is_torch_available():
     from .modeling_utils import (PreTrainedModel, prune_layer, Conv1D)
-    from .modeling_auto import (AutoModel, AutoModelForSequenceClassification, AutoModelForQuestionAnswering,
-                                AutoModelWithLMHead)
 
     from .modeling_bert import (BertPreTrainedModel, BertModel, BertForPreTraining,
                                 BertForMaskedLM, BertForNextSentencePrediction,
                                 BertForSequenceClassification, BertForMultipleChoice,
                                 BertForTokenClassification, BertForQuestionAnswering,
                                 load_tf_weights_in_bert, BERT_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_openai import (OpenAIGPTPreTrainedModel, OpenAIGPTModel,
-                                OpenAIGPTLMHeadModel, OpenAIGPTDoubleHeadsModel,
-                                load_tf_weights_in_openai_gpt, OPENAI_GPT_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_transfo_xl import (TransfoXLPreTrainedModel, TransfoXLModel, TransfoXLLMHeadModel,
-                                    AdaptiveEmbedding,
-                                    load_tf_weights_in_transfo_xl, TRANSFO_XL_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_gpt2 import (GPT2PreTrainedModel, GPT2Model,
-                                GPT2LMHeadModel, GPT2DoubleHeadsModel,
-                                load_tf_weights_in_gpt2, GPT2_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_ctrl import (CTRLPreTrainedModel, CTRLModel,
-                                CTRLLMHeadModel,
-                                CTRL_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_xlnet import (XLNetPreTrainedModel, XLNetModel, XLNetLMHeadModel,
-                                XLNetForSequenceClassification, XLNetForMultipleChoice,
-                                XLNetForQuestionAnsweringSimple, XLNetForQuestionAnswering,
-                                load_tf_weights_in_xlnet, XLNET_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_xlm import (XLMPreTrainedModel , XLMModel,
-                            XLMWithLMHeadModel, XLMForSequenceClassification,
-                            XLMForQuestionAnswering, XLMForQuestionAnsweringSimple,
-                            XLM_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_roberta import (RobertaForMaskedLM, RobertaModel,
-                                RobertaForSequenceClassification, RobertaForMultipleChoice,
-                                RobertaForTokenClassification,
-                                ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_distilbert import (DistilBertForMaskedLM, DistilBertModel,
-                                DistilBertForSequenceClassification, DistilBertForQuestionAnswering,
-                                DistilBertForTokenClassification,
-                                DISTILBERT_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_camembert import (CamembertForMaskedLM, CamembertModel,
-                                CamembertForSequenceClassification, CamembertForMultipleChoice,
-                                CamembertForTokenClassification,
-                                CAMEMBERT_PRETRAINED_MODEL_ARCHIVE_MAP)
-    from .modeling_encoder_decoder import PreTrainedEncoderDecoder, Model2Model
-
-    from .modeling_albert import (AlbertModel, AlbertForMaskedLM, AlbertForSequenceClassification,
-                                AlbertForQuestionAnswering,
-                                load_tf_weights_in_albert, ALBERT_PRETRAINED_MODEL_ARCHIVE_MAP)
 
     # Optimization
     from .optimization import (AdamW, get_constant_schedule, get_constant_schedule_with_warmup, get_cosine_schedule_with_warmup,
