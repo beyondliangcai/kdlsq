@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a852e0f4-4ca5-4c2c-a0c0-333680a190dd" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/scripts/run_glue.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/run_glue.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/transformers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformers/__init__.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />

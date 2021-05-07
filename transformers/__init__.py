@@ -28,7 +28,7 @@ from .data import (is_sklearn_available,
                    glue_processors, glue_tasks_num_labels)
 
 if is_sklearn_available():
-    from .data import glue_compute_metrics, xnli_compute_metrics
+    from .data import glue_compute_metrics
 
 # Tokenizers
 #from .tokenization_camembert import CamembertTokenizer
