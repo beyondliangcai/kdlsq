@@ -3,4 +3,4 @@ from .processors import glue_output_modes, glue_processors, glue_tasks_num_label
 
 from .metrics import is_sklearn_available
 if is_sklearn_available():
-    from .metrics import glue_compute_metrics, xnli_compute_metrics
+    from .metrics import glue_compute_metrics
