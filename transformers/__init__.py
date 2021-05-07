@@ -33,7 +33,8 @@ if is_sklearn_available():
 
 # Tokenizers
 #from .tokenization_camembert import CamembertTokenizer
-
+from .tokenization_utils import  (PreTrainedTokenizer)
+from .tokenization_bert import BertTokenizer,BasicTokenizer,WordpieceTokenizer
 # Configurations
 from .configuration_bert import BertConfig, BERT_PRETRAINED_CONFIG_ARCHIVE_MAP
 # Modeling

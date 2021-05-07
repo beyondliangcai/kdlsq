@@ -28,12 +28,6 @@ from transformers import (
     AdamW,
     BertConfig,
     BertTokenizer,
-    RobertaConfig,
-    RobertaTokenizer,
-    XLMConfig,
-    XLMTokenizer,
-    XLNetConfig,
-    XLNetTokenizer,
     get_linear_schedule_with_warmup,
 )
 
