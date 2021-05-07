@@ -23,9 +23,6 @@ import torch
 from torch.utils.data import DataLoader, SequentialSampler, TensorDataset
 from transformers import (
     BertForSequenceClassification,
-    RobertaForSequenceClassification,
-    XLMForSequenceClassification,
-    XLNetForSequenceClassification,
 )
 
 from utils import SequenceClsInputExample

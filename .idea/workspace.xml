@@ -2,8 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a852e0f4-4ca5-4c2c-a0c0-333680a190dd" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/transformers/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/transformers/tokenization_bert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/kdlsq.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/kdlsq.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tranformers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/tranformers/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/sequence_classification.py" beforeDir="false" afterPath="$PROJECT_DIR$/sequence_classification.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tranformers/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/tranformers/configuration_bert.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformers/configuration_bert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tranformers/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformers/file_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tranformers/modeling_bert.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformers/modeling_bert.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tranformers/modeling_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformers/modeling_utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/tranformers/optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/transformers/optimization.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -54,16 +63,5 @@
       <screen x="67" y="27" width="1853" height="1053" />
     </state>
     <state x="482" y="187" key="SettingsEditor/67.27.1853.1053@67.27.1853.1053" timestamp="1619578191117" />
-  </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>17</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
   </component>
 </project>
