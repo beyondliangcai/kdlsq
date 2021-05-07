@@ -50,9 +50,6 @@ class TransformerSequenceClassifier(TransformerBase):
     MODEL_CLASS = {
         "bert": BertForSequenceClassification,
         "quant_bert": QuantizedBertForSequenceClassification,
-        "xlnet": XLNetForSequenceClassification,
-        "xlm": XLMForSequenceClassification,
-        "roberta": RobertaForSequenceClassification,
     }
 
     def __init__(
