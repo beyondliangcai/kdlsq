@@ -96,7 +96,7 @@ def quantized_activation_setup(config, name, *args, **kwargs):
         quant_config = QuantizationConfig.from_dict(getattr(config, name))
         quant_config.activation_bits = 8
         activation = QuantizedActivation.from_config(*args, **kwargs, config=quant_config)
-        print("we did here for activation!")
+#         print("we did here for activation!")
     except AttributeError:
         activation = None
     return activation
