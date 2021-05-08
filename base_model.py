@@ -75,7 +75,7 @@ class TrainableModel(ABC):
 ALL_MODELS = sum(
     (
         tuple(conf.pretrained_config_archive_map.keys())
-        for conf in (BertConfig, XLNetConfig, XLMConfig)
+        for conf in [BertConfig]
     ),
     (),
 )
@@ -95,9 +95,6 @@ class TransformerBase(TrainableModel):
     MODEL_CONFIGURATIONS = {
         "bert": (BertConfig, BertTokenizer),
         "quant_bert": (QuantizedBertConfig, BertTokenizer),
-        "xlnet": (XLNetConfig, XLNetTokenizer),
-        "xlm": (XLMConfig, XLMTokenizer),
-        "roberta": (RobertaConfig, RobertaTokenizer),
     }
 
     def __init__(
@@ -109,7 +106,7 @@ class TransformerBase(TrainableModel):
             config_name=None,
             tokenizer_name=None,
             do_lower_case=False,
-            output_path=None,
+            output_path="model_save_dir",
             device="cpu",
             n_gpus=0,
     ):
