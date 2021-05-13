@@ -13,7 +13,7 @@ import random
 import sys
 import re
 import json
-import pickle
+import pickleBertForQuestionAnswering
 
 import numpy as np
 import torch
