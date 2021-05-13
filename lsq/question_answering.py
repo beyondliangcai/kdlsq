@@ -27,12 +27,7 @@ from torch.utils.data import DataLoader,RandomSampler, SequentialSampler, Tensor
 from torch.nn import CrossEntropyLoss
 from tqdm import tqdm, trange
 from transformers import (BertForQuestionAnswering,
-                          XLMForQuestionAnswering,
-                          XLNetForQuestionAnswering,
-                          ROBERTA_PRETRAINED_MODEL_ARCHIVE_MAP,
-                          BertPreTrainedModel,
-                          RobertaConfig,
-                          RobertaModel)
+                          BertPreTrainedModel)
 from quantized_bert import QuantizedBertForQuestionAnswering
 from quantization import reset_wgt_alpha, kl_divergence_initilization
 from quantization import reset_act_alpha_true, reset_act_alpha_false
