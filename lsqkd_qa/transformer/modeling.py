@@ -1,3 +1,20 @@
+# coding=utf-8
+# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
+# Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+"""PyTorch BERT model."""
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import copy
@@ -18,6 +35,9 @@ from torch.nn import CrossEntropyLoss, MSELoss
 from torch.autograd import Variable
 from torch.nn.parameter import Parameter
 from .file_utils import WEIGHTS_NAME, CONFIG_NAME
+
+# from .utils_quant import QuantizeLinear
+# from .utils_quant import EightAct as EightActive
 
 logger = logging.getLogger(__name__)
 
@@ -142,7 +162,6 @@ def swish(x):
 
 BertLayerNorm = torch.nn.LayerNorm
 
-
 class HeadAttention(nn.Module):
     def __init__(self, config, hidden_size, head_num, head_used):
         super(HeadAttention, self).__init__()
@@ -182,7 +201,7 @@ class HeadAttention(nn.Module):
         attention_scores = torch.matmul(
             query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / \
-                           math.sqrt(self.attention_head_size)
+            math.sqrt(self.attention_head_size)
         # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
         attention_scores = attention_scores + attention_mask
 
@@ -196,13 +215,13 @@ class HeadAttention(nn.Module):
         context_layer = torch.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[
-                                  :-2] + (self.all_head_size,)
+            :-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
 
         if self.num_heads_used != self.num_attention_heads:
             pad_shape = context_layer.size()[:-1] + \
-                        ((self.num_attention_heads - self.num_heads_used)
-                         * self.attention_head_size,)
+                ((self.num_attention_heads - self.num_heads_used)
+                 * self.attention_head_size, )
 
             pad_layer = torch.zeros(*pad_shape).to(context_layer.device)
             context_layer = torch.cat((context_layer, pad_layer), -1)
@@ -286,11 +305,11 @@ class BertConfig(object):
         for key, value in json_object.items():
             config.__dict__[key] = value
         return config
-
+    
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, **kwargs):
         config_file = os.path.join(pretrained_model_name_or_path, CONFIG_NAME)
-        logger.info("loading configuration file {}".format(config_file))
+        # logger.info("loading configuration file {}".format(config_file))
         config = cls.from_json_file(config_file)
 
         # Update config with kwargs if needed
@@ -302,7 +321,7 @@ class BertConfig(object):
         for key in to_remove:
             kwargs.pop(key, None)
 
-        logger.info("Model config %s", str(config))
+        # logger.info("Model config %s", str(config))
         return config
 
     @classmethod
@@ -331,7 +350,7 @@ class BertConfig(object):
         """ Save this instance to a json file."""
         with open(json_file_path, "w", encoding='utf-8') as writer:
             writer.write(self.to_json_string())
-
+    
     def update(cls, new_dict):
         for key, value in new_dict.items():
             cls.__dict__[key] = value
@@ -357,7 +376,8 @@ class BertEmbeddings(nn.Module):
 
     def forward(self, input_ids, token_type_ids=None):
         seq_length = input_ids.size(1)
-        position_ids = torch.arange(seq_length, dtype=torch.long, device=input_ids.device)
+        position_ids = torch.arange(
+            seq_length, dtype=torch.long, device=input_ids.device)
         position_ids = position_ids.unsqueeze(0).expand_as(input_ids)
         if token_type_ids is None:
             token_type_ids = torch.zeros_like(input_ids)
@@ -393,7 +413,8 @@ class BertSelfAttention(nn.Module):
         self.dropout = nn.Dropout(config.attention_probs_dropout_prob)
 
     def transpose_for_scores(self, x):
-        new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
+        new_x_shape = x.size()[
+            :-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
 
@@ -405,12 +426,13 @@ class BertSelfAttention(nn.Module):
         query_layer = self.transpose_for_scores(mixed_query_layer)
         key_layer = self.transpose_for_scores(mixed_key_layer)
         value_layer = self.transpose_for_scores(mixed_value_layer)
-
-        # where we delete the activation quantization#
+        
+        # where we delete the activaltion quantization#
         ###############################################
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
+        attention_scores = torch.matmul(
+            query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
         attention_scores = attention_scores + attention_mask
@@ -421,14 +443,14 @@ class BertSelfAttention(nn.Module):
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
-
+        
         # where we delete the activaltion quantization#
         ###############################################
-
+        
         context_layer = torch.matmul(attention_probs, value_layer)
         context_layer = context_layer.permute(0, 2, 1, 3).contiguous()
         new_context_layer_shape = context_layer.size()[
-                                  :-2] + (self.all_head_size,)
+            :-2] + (self.all_head_size,)
         context_layer = context_layer.view(*new_context_layer_shape)
         return context_layer, attention_scores
 
@@ -491,7 +513,7 @@ class BertOutput(nn.Module):
                 config.intermediate_size, config.hidden_size)
         else:
             self.dense = nn.Linear(intermediate_size, config.hidden_size)
-
+            
         # where we delete the linear quantization#
         ###############################################
         self.LayerNorm = BertLayerNorm(config.hidden_size, eps=1e-12)
@@ -631,7 +653,7 @@ class BertPreTrainingHeads(nn.Module):
 
 class BertPreTrainedModel(nn.Module):
     """ An abstract class to handle weights initialization and
-        a simple interface for downloading and loading pretrained models.
+        a simple interface for dowloading and loading pretrained models.
     """
 
     def __init__(self, config, *inputs, **kwargs):
@@ -665,7 +687,7 @@ class BertPreTrainedModel(nn.Module):
             pretrained_model_name_or_path, CONFIG_NAME)
         config = BertConfig.from_json_file(resolved_config_file)
 
-        logger.info("Model config {}".format(config))
+        # logger.info("Model config {}".format(config))
         model = cls(config, *inputs, **kwargs)
         return model
 
@@ -693,8 +715,7 @@ class BertPreTrainedModel(nn.Module):
                     . `model.chkpt` a TensorFlow checkpoint
             from_tf: should we load the weights from a locally saved TensorFlow checkpoint
             cache_dir: an optional path to a folder in which the pre-trained models will be cached.
-            state_dict: an optional state dictionnary (collections.OrderedDict object) to use
-             instead of Google pre-trained models
+            state_dict: an optional state dictionnary (collections.OrderedDict object) to use instead of Google pre-trained models
             *inputs, **kwargs: additional input for the specific Bert class
                 (ex: num_labels for BertForSequenceClassification)
         """
@@ -710,11 +731,7 @@ class BertPreTrainedModel(nn.Module):
         if do_quantize is not None:
             kwargs.pop('do_quantize')
         config.__dict__['do_quantize'] = 1 if do_quantize else 0
-        task_name = kwargs.get('task_name', None)
-        if task_name is not None:
-            kwargs.pop('task_name')
-        config.__dict__['task_name'] = task_name
-        logger.info("Model config {}".format(config))
+        # logger.info("Model config {}".format(config))
         # Instantiate model.
 
         # model = cls(config, *inputs, **kwargs)
@@ -724,7 +741,7 @@ class BertPreTrainedModel(nn.Module):
         if state_dict is None and not from_tf:
             weights_path = os.path.join(
                 pretrained_model_name_or_path, WEIGHTS_NAME)
-            logger.info("Loading model {}".format(weights_path))
+            # logger.info("Loading model {}".format(weights_path))
             state_dict = torch.load(weights_path, map_location='cpu')
 
         if from_tf:
@@ -769,18 +786,18 @@ class BertPreTrainedModel(nn.Module):
         if not hasattr(model, 'bert') and any(s.startswith('bert.') for s in state_dict.keys()):
             start_prefix = 'bert.'
 
-        logger.info('loading model...')
+        # logger.info('loading model...')
         load(model, prefix=start_prefix)
-        logger.info('done!')
-        if len(missing_keys) > 0:
-            logger.info("Weights of {} not initialized from pretrained model: {}".format(
-                model.__class__.__name__, missing_keys))
-        if len(unexpected_keys) > 0:
-            logger.info("Weights from pretrained model not used in {}: {}".format(
-                model.__class__.__name__, unexpected_keys))
+        # logger.info('done!')
+        # if len(missing_keys) > 0:
+        #     logger.info("Weights of {} not initialized from pretrained model: {}".format(
+        #         model.__class__.__name__, missing_keys))
+        # if len(unexpected_keys) > 0:
+        #     logger.info("Weights from pretrained model not used in {}: {}".format(
+        #         model.__class__.__name__, unexpected_keys))
         if len(error_msgs) > 0:
             raise RuntimeError('Error(s) in loading state_dict for {}:\n\t{}'.format(
-                model.__class__.__name__, "\n\t".join(error_msgs)))
+                               model.__class__.__name__, "\n\t".join(error_msgs)))
 
         return model
 
@@ -802,8 +819,7 @@ class BertModel(BertPreTrainedModel):
             selected in [0, 1]. It's a mask to be used if the input sequence length is smaller than the max
             input sequence length in the current batch. It's the mask that we typically use for attention when
             a batch has varying length sentences.
-        `output_all_encoded_layers`: boolean which controls the content of the `encoded_layers` output as described
-         below. Default: `True`.
+        `output_all_encoded_layers`: boolean which controls the content of the `encoded_layers` output as described below. Default: `True`.
 
     Outputs: Tuple of (encoded_layers, pooled_output)
         `encoded_layers`: controled by `output_all_encoded_layers` argument:
@@ -896,8 +912,7 @@ class BertForPreTraining(BertPreTrainedModel):
             selected in [0, 1]. It's a mask to be used if the input sequence length is smaller than the max
             input sequence length in the current batch. It's the mask that we typically use for attention when
             a batch has varying length sentences.
-        `masked_lm_labels`: optional masked language modeling labels: torch.LongTensor of shape
-         [batch_size, sequence_length]
+        `masked_lm_labels`: optional masked language modeling labels: torch.LongTensor of shape [batch_size, sequence_length]
             with indices selected in [-1, 0, ..., vocab_size]. All labels set to -1 are ignored (masked), the loss
             is only computed for the labels set in [0, ..., vocab_size]
         `next_sentence_label`: optional next sentence classification loss: torch.LongTensor of shape [batch_size]
@@ -1101,7 +1116,7 @@ class BertForNextSentencePrediction(BertPreTrainedModel):
 class BertForSentencePairClassification(BertPreTrainedModel):
     def __init__(self, config, num_labels):
         super(BertForSentencePairClassification, self).__init__(config)
-        self.num_labels = config.num_labels
+        self.num_labels = confignum_labels
         self.bert = BertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size * 3, num_labels)
@@ -1127,7 +1142,7 @@ class BertForSentencePairClassification(BertPreTrainedModel):
         else:
             return logits
 
-
+    
 class BertForSequenceClassification(BertPreTrainedModel):
     def __init__(self, config):
         super(BertForSequenceClassification, self).__init__(config)
@@ -1136,18 +1151,14 @@ class BertForSequenceClassification(BertPreTrainedModel):
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
         self.apply(self.init_bert_weights)
-        self.task_name = config.task_name
+
 
     def forward(self, input_ids, token_type_ids=None,
                 attention_mask=None, labels=None,
                 output_att=False, output_hidden=False, is_student=False):
         sequence_output, att_output, pooled_output = self.bert(input_ids, token_type_ids, attention_mask,
-                                                               output_all_encoded_layers=True, output_att=True)
+                                                   output_all_encoded_layers=True, output_att=True)
 
-        # if self.task_name == 'qqp':
-        #     logits = self.classifier(torch.relu(pooled_output))  # only for qqp
-        # else:
-        #     logits = self.classifier(self.dropout(pooled_output))  # for others
         logits = self.classifier(self.dropout(pooled_output))
 
         if labels is not None:
@@ -1157,21 +1168,20 @@ class BertForSequenceClassification(BertPreTrainedModel):
         else:
             return logits, att_output, sequence_output
 
-
 class BertForQuestionAnswering(BertPreTrainedModel):
     def __init__(self, config):
         super(BertForQuestionAnswering, self).__init__(config)
         self.bert = BertModel(config)
         self.qa_outputs = nn.Linear(config.hidden_size, 2)
         self.apply(self.init_bert_weights)
-
+        
     def forward(
-            self,
-            input_ids=None,
-            token_type_ids=None,
-            attention_mask=None,
-            start_positions=None,
-            end_positions=None
+        self,
+        input_ids=None,
+        token_type_ids=None,
+        attention_mask=None,
+        start_positions=None,
+        end_positions=None
     ):
         r"""
         start_positions (:obj:`torch.LongTensor` of shape :obj:`(batch_size,)`, `optional`, defaults to :obj:`None`):
@@ -1183,8 +1193,7 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             Positions are clamped to the length of the sequence (`sequence_length`).
             Position outside of the sequence are not taken into account for computing the loss.
     Returns:
-        :obj:`tuple(torch.FloatTensor)` comprising various elements depending on the configuration
-         (:class:`~transformers.BertConfig`) and inputs:
+        :obj:`tuple(torch.FloatTensor)` comprising various elements depending on the configuration (:class:`~transformers.BertConfig`) and inputs:
         loss (:obj:`torch.FloatTensor` of shape :obj:`(1,)`, `optional`, returned when :obj:`labels` is provided):
             Total span extraction loss is the sum of a Cross-Entropy for the start and end positions.
         start_scores (:obj:`torch.FloatTensor` of shape :obj:`(batch_size, sequence_length,)`):
@@ -1215,7 +1224,7 @@ class BertForQuestionAnswering(BertPreTrainedModel):
         """
 
         sequence_output, att_output, pooled_output = self.bert(
-            input_ids, token_type_ids, attention_mask, output_all_encoded_layers=True, output_att=True)
+            input_ids,token_type_ids,attention_mask, output_all_encoded_layers=True, output_att=True)
 
         last_sequence_output = sequence_output[-1]
 
