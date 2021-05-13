@@ -23,11 +23,8 @@ from torch.nn import CrossEntropyLoss, MSELoss
 
 from transformer.modeling import BertForQuestionAnswering
 from quantized_bert import QuantizedBertForQuestionAnswering
-from quantization import reset_wgt_alpha, kl_divergence_initilization
-from quantization import reset_act_alpha_true, reset_act_alpha_false
 from transformer.tokenization import (BasicTokenizer, BertTokenizer, whitespace_tokenize)
-from transformer.optimization import BertAdam, WarmupLinearSchedule
-from Q8BertOptimizer.optimization import AdamW, get_linear_schedule_with_warmup
+from transformer.optimization import BertAdam, AdamW, get_linear_schedule_with_warmup
 from transformer.file_utils import WEIGHTS_NAME, CONFIG_NAME
 from time import sleep
 
@@ -961,15 +958,6 @@ def do_eval(args, model, dataloader, features, examples, device, dev_dataset):
                              args.version_2_with_negative, args.null_score_diff_threshold, dev_dataset)
 
 
-def do_eval_v2(args, model, dataloader, features, examples, device, dev_dataset):
-    for _, batch_ in enumerate(dataloader):
-        batch_ = tuple(t.to(device) for t in batch_)
-        input_ids, input_mask, segment_ids, example_indices = batch_
-        with torch.no_grad():
-            (batch_start_logits, batch_end_logits), _, _ = model(input_ids, segment_ids, input_mask)
-        break  # one batch is enough for initialize activation alpha
-
-
 def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", default='./output', type=str)
@@ -1004,7 +992,7 @@ def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
 
     args = parser.parse_args()
     # summaryWriter = SummaryWriter(args.output_dir)
-    logger.info('The args: {}'.format(args))
+    # logger.info('The args: {}'.format(args))
     if args.version_2_with_negative:
         processed_data_dir = os.path.join(args.data_dir, 'preprocessed', 'squadv2.0')
         args.data_dir = os.path.join(args.data_dir, 'squadv2.0')
@@ -1019,13 +1007,13 @@ def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
     args.student_model = args.model_dir
     device = torch.device("cuda" if torch.cuda.is_available() and not args.no_cuda else "cpu")
     n_gpu = torch.cuda.device_count()
-    logger.info("device: {} n_gpu: {}".format(device, n_gpu))
+    # logger.info("device: {} n_gpu: {}".format(device, n_gpu))
     # Prepare seed
     set_seed(args.seed)
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     tokenizer = BertTokenizer.from_pretrained(args.student_model, do_lower_case=args.do_lower_case)
-    # num_train_optimization_steps = 0.0
+    num_train_optimization_steps = 0.0
 
     # noinspection PyBroadException
     try:
@@ -1061,10 +1049,10 @@ def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
         with open(dev_file, 'wb') as f:
             pickle.dump(eval_features, f)
 
-    logger.info("***** Running predictions *****")
-    logger.info("  Num orig examples = %d", len(eval_examples))
-    logger.info("  Num split examples = %d", len(eval_features))
-    logger.info("  Batch size = %d", args.batch_size)
+    # logger.info("***** Running predictions *****")
+    # logger.info("  Num orig examples = %d", len(eval_examples))
+    # logger.info("  Num split examples = %d", len(eval_features))
+    # logger.info("  Batch size = %d", args.batch_size)
 
     all_input_ids = torch.tensor([f.input_ids for f in eval_features], dtype=torch.long)
     all_input_mask = torch.tensor([f.input_mask for f in eval_features], dtype=torch.long)
@@ -1077,20 +1065,6 @@ def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
     student_model = QuantizedBertForQuestionAnswering.from_pretrained(args.student_model,
                                                                       do_quantize=args.quant_activation)
     student_model.to(device)
-
-    # ******************* initialize the wgt-alpha **************
-    logger.info("***** wgt_alpha initialization *****")
-    student_model.apply(kl_divergence_initilization)
-    # ***********************************************************
-
-    # ******************* initialize the act-alpha **************
-    logger.info("***** activation alpha initialization *****")
-    student_model.eval()
-    student_model.apply(reset_act_alpha_true)
-    do_eval_v2(args, student_model, eval_dataloader, eval_features, eval_examples, device, dev_dataset)
-    student_model.apply(reset_act_alpha_false)
-    # ***********************************************************
-
     if args.do_eval:
         logger.info("***** Running evaluation *****")
         student_model.eval()
@@ -1128,10 +1102,10 @@ def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
         num_train_optimization_steps = int(
             len(train_features) / args.batch_size / args.gradient_accumulation_steps) * args.num_train_epochs
 
-        logger.info("***** Running training *****")
-        logger.info("  Num split examples = %d", len(train_features))
-        logger.info("  Batch size = %d", args.batch_size)
-        logger.info("  Num steps = %d", num_train_optimization_steps)
+        # logger.info("***** Running training *****")
+        # logger.info("  Num split examples = %d", len(train_features))
+        # logger.info("  Batch size = %d", args.batch_size)
+        # logger.info("  Num steps = %d", num_train_optimization_steps)
         all_input_ids = torch.tensor([f.input_ids for f in train_features], dtype=torch.long)
         all_input_mask = torch.tensor([f.input_mask for f in train_features], dtype=torch.long)
         all_segment_ids = torch.tensor([f.segment_ids for f in train_features], dtype=torch.long)
@@ -1159,39 +1133,53 @@ def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
         param_optimizer = list(student_model.named_parameters())
         size = 0
         for n, p in student_model.named_parameters():
-            logger.info('n: {}'.format(n))
+            # logger.info('n: {}'.format(n))
             size += p.nelement()
 
         logger.info('Total parameters: {}'.format(size))
         logger.info(f"teacher_performance={teacher_performance}")
-        
-        no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
-        alpha = ["wgt_alpha", "act_alpha"]
-        optimizer_grouped_parameters = [
-            {'params': [p for n, p in param_optimizer if
-                        not any(nd in n for nd in no_decay) and not any(nd in n for nd in alpha)],
-             'weight_decay': 0.01},
-            {'params': [p for n, p in param_optimizer if
-                        any(nd in n for nd in no_decay) and not any(nd in n for nd in alpha)], 'weight_decay': 0.0},
-            {'params': [p for n, p in param_optimizer if 'wgt_alpha' in n], 'lr': 1e-3, 'weight_decay': 2e-5},
-            {'params': [p for n, p in param_optimizer if 'act_alpha' in n], 'lr': 3e-2, 'weight_decay': 1e-4},
-        ]
-
-        adam_epsilon = 1e-8
-        warmup_steps = 0
-        # total_steps = 0
-        optimizer = AdamW(optimizer_grouped_parameters, lr=args.learning_rate, eps=adam_epsilon)
-        scheduler = get_linear_schedule_with_warmup(optimizer, num_warmup_steps=warmup_steps,
-                                                    num_training_steps=num_train_optimization_steps)
-
-        ##############################################################
+        # no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
+        # optimizer_grouped_parameters = [
+        #     {'params': [p for n, p in param_optimizer if not any(nd in n for nd in no_decay)], 'weight_decay': 0.01},
+        #     {'params': [p for n, p in param_optimizer if any(nd in n for nd in no_decay)], 'weight_decay': 0.0}
+        # ]
         # schedule = 'warmup_linear'
         # optimizer = BertAdam(optimizer_grouped_parameters,
         #                      schedule=schedule,
         #                      lr=args.learning_rate,
         #                      warmup=args.warmup_proportion,
         #                      t_total=num_train_optimization_steps)
-        ##############################################################
+
+        # Prepare optimizer *****q8bert*****
+        weight_decay = 0.0
+        learning_rate = args.learning_rate
+        adam_epsilon = 1e-8
+        warmup_steps = 0
+        total_steps = get_train_steps_epochs(args.num_train_epochs, 1, len(train_features), args.batch_size)
+        beta1 = 0.9
+        beta2 = 0.999
+        no_decay = ["bias", "LayerNorm.weight"]
+        optimizer_grouped_parameters = [
+            {
+                "params": [
+                    p
+                    for n, p in student_model.named_parameters()
+                    if not any(nd in n for nd in no_decay)
+                ],
+                "weight_decay": weight_decay,
+            },
+            {
+                "params": [
+                    p for n, p in student_model.named_parameters() if any(nd in n for nd in no_decay)
+                ],
+                "weight_decay": 0.0,
+            },
+        ]
+        optimizer = AdamW(optimizer_grouped_parameters, lr=learning_rate, eps=adam_epsilon, betas=(beta1, beta2))
+        scheduler = get_linear_schedule_with_warmup(
+            optimizer, num_warmup_steps=warmup_steps, num_training_steps=total_steps
+        )
+        # end optimizer
 
         # Prepare loss functions
         loss_mse = MSELoss()
@@ -1209,7 +1197,7 @@ def main(version_2_with_negative=0, new_kd=False, model_dir='', data_dir=''):
         for epoch_ in range(int(args.num_train_epochs)):
             for step, batch in enumerate(train_dataloader):
                 student_model.train()
-                if (global_step % args.eval_step == 0 or global_step == num_train_optimization_steps - 1) and global_step > num_train_optimization_steps * 0.8:
+                if (global_step % args.eval_step == 0 or global_step == total_steps - 1) and global_step > total_steps * 0.8:
                     # logger.info("***** Running evaluation *****")
                     # logger.info("  Epoch = {} iter {} step".format(epoch_, global_step))
                     # if previous_best is not None:
@@ -1343,9 +1331,9 @@ if __name__ == "__main__":
     my_model_dir = '/mnt/sdb4/tcwu/model_save/nlp/tinybert_models/6L_768D_FinalModel/'
     my_data_dir = '/mnt/sdb4/tcwu/datasets/nlp_data/'
 
-    bit_list = [3]
+    bit_list = [5, 6]
     kd_list = [True]
-    version_2_list = [0]
+    version_2_list = [1]
     for version_2 in version_2_list:
         for bit in bit_list:
             for kd in kd_list:
@@ -1360,3 +1348,4 @@ if __name__ == "__main__":
                       'bit', bit,
                       'new_kd', kd,
                       'time:', end_total - start_total)
+
