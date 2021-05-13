@@ -1,19 +1,3 @@
-# coding=utf-8
-# Copyright 2018 The Google AI Language Team Authors and The HuggingFace Inc. team.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-"""PyTorch optimization for BERT model."""
-
 import math
 import torch
 from torch.optim import Optimizer
@@ -22,6 +6,7 @@ from torch.nn.utils import clip_grad_norm_
 import logging
 import abc
 import sys
+from torch.optim.lr_scheduler import LambdaLR
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +20,7 @@ else:
 class _LRSchedule(ABC):
     """ Parent of all LRSchedules here. """
     warn_t_total = False        # is set to True for schedules where progressing beyond t_total steps doesn't make sense
+
     def __init__(self, warmup=0.002, t_total=-1, **kw):
         """
         :param warmup:  what fraction of t_total steps will be used for linear warmup
@@ -63,8 +49,9 @@ class _LRSchedule(ABC):
         # warning for exceeding t_total (only active with warmup_linear
         if not nowarn and self.warn_t_total and progress > 1. and progress > self.warned_for_t_total_at_progress:
             logger.warning(
-                "Training beyond specified 't_total'. Learning rate multiplier set to {}. Please set 't_total' of {} correctly."
-                    .format(ret, self.__class__.__name__))
+                "Training beyond specified 't_total'. "
+                "Learning rate multiplier set to {}. "
+                "Please set 't_total' of {} correctly.".format(ret, self.__class__.__name__))
             self.warned_for_t_total_at_progress = progress
         # end warning
         return ret
@@ -90,11 +77,13 @@ class WarmupCosineSchedule(_LRSchedule):
     If `cycles` (default=0.5) is different from default, learning rate follows cosine function after warmup.
     """
     warn_t_total = True
+
     def __init__(self, warmup=0.002, t_total=-1, cycles=.5, **kw):
         """
         :param warmup:      see LRSchedule
         :param t_total:     see LRSchedule
-        :param cycles:      number of cycles. Default: 0.5, corresponding to cosine decay from 1. at progress==warmup and 0 at progress==1.
+        :param cycles:      number of cycles. Default: 0.5, corresponding to cosine decay from 1. at progress==warmup
+         and 0 at progress==1.
         :param kw:
         """
         super(WarmupCosineSchedule, self).__init__(warmup=warmup, t_total=t_total, **kw)
@@ -130,13 +119,15 @@ class WarmupCosineWithHardRestartsSchedule(WarmupCosineSchedule):
 class WarmupCosineWithWarmupRestartsSchedule(WarmupCosineWithHardRestartsSchedule):
     """
     All training progress is divided in `cycles` (default=1.) parts of equal length.
-    Every part follows a schedule with the first `warmup` fraction of the training steps linearly increasing from 0. to 1.,
+    Every part follows a schedule with the first `warmup` fraction of the training steps linearly increasing from
+     0. to 1.,
     followed by a learning rate decreasing from 1. to 0. following a cosine curve.
     """
     def __init__(self, warmup=0.002, t_total=-1, cycles=1., **kw):
         assert(warmup * cycles < 1.)
         warmup = warmup * cycles if warmup >= 0 else warmup
-        super(WarmupCosineWithWarmupRestartsSchedule, self).__init__(warmup=warmup, t_total=t_total, cycles=cycles, **kw)
+        super(WarmupCosineWithWarmupRestartsSchedule, self).__init__(warmup=warmup, t_total=t_total, cycles=cycles,
+                                                                     **kw)
 
     def get_lr_(self, progress):
         progress = progress * self.cycles % 1.
@@ -165,6 +156,7 @@ class WarmupLinearSchedule(_LRSchedule):
     Linearly decreases learning rate from 1. to 0. over remaining `1 - warmup` steps.
     """
     warn_t_total = True
+
     def get_lr_(self, progress):
         if progress < self.warmup:
             return progress / self.warmup
@@ -188,7 +180,8 @@ class BertAdam(Optimizer):
         t_total: total number of training steps for the learning
             rate schedule, -1  means constant learning rate of 1. (no warmup regardless of warmup setting). Default: -1
         schedule: schedule to use for the warmup (see above).
-            Can be `'warmup_linear'`, `'warmup_constant'`, `'warmup_cosine'`, `'none'`, `None` or a `_LRSchedule` object (see below).
+            Can be `'warmup_linear'`, `'warmup_constant'`, `'warmup_cosine'`, `'none'`, `None` or a `_LRSchedule`
+             object (see below).
             If `None` or `'none'`, learning rate is always kept constant.
             Default : `'warmup_linear'`
         b1: Adams b1. Default: 0.9
@@ -215,7 +208,8 @@ class BertAdam(Optimizer):
             schedule = schedule_type(warmup=warmup, t_total=t_total)
         else:
             if warmup != -1 or t_total != -1:
-                logger.warning("warmup and t_total on the optimizer are ineffective when _LRSchedule object is provided as schedule. "
+                logger.warning("warmup and t_total on the optimizer are ineffective when _LRSchedule object is "
+                               "provided as schedule. "
                                "Please specify custom warmup and t_total in _LRSchedule object.")
         defaults = dict(lr=lr, schedule=schedule,
                         b1=b1, b2=b2, e=e, weight_decay=weight_decay,
@@ -300,3 +294,77 @@ class BertAdam(Optimizer):
                 # bias_correction2 = 1 - beta2 ** state['step']
 
         return loss
+
+
+class AdamW(Optimizer):
+    def __init__(self, params, lr=1e-3, betas=(0.9, 0.999), eps=1e-6, weight_decay=0.0, correct_bias=True):
+        if lr < 0.0:
+            raise ValueError("Invalid learning rate: {} - should be >= 0.0".format(lr))
+        if not 0.0 <= betas[0] < 1.0:
+            raise ValueError("Invalid beta parameter: {} - should be in [0.0, 1.0[".format(betas[0]))
+        if not 0.0 <= betas[1] < 1.0:
+            raise ValueError("Invalid beta parameter: {} - should be in [0.0, 1.0[".format(betas[1]))
+        if not 0.0 <= eps:
+            raise ValueError("Invalid epsilon value: {} - should be >= 0.0".format(eps))
+        defaults = dict(lr=lr, betas=betas, eps=eps, weight_decay=weight_decay,
+                        correct_bias=correct_bias)
+        super(AdamW, self).__init__(params, defaults)
+
+    def step(self, closure=None):
+        loss = None
+        if closure is not None:
+            loss = closure()
+
+        for group in self.param_groups:
+            for p in group['params']:
+                if p.grad is None:
+                    continue
+                grad = p.grad.data
+                if grad.is_sparse:
+                    raise RuntimeError('Adam does not support sparse gradients, please consider SparseAdam instead')
+
+                state = self.state[p]
+
+                # State initialization
+                if len(state) == 0:
+                    state['step'] = 0
+                    # Exponential moving average of gradient values
+                    state['exp_avg'] = torch.zeros_like(p.data)
+                    # Exponential moving average of squared gradient values
+                    state['exp_avg_sq'] = torch.zeros_like(p.data)
+
+                exp_avg, exp_avg_sq = state['exp_avg'], state['exp_avg_sq']
+                beta1, beta2 = group['betas']
+
+                state['step'] += 1
+
+                # Decay the first and second moment running average coefficient
+                # In-place operations to update the averages at the same time
+                exp_avg.mul_(beta1).add_(1.0 - beta1, grad)
+                exp_avg_sq.mul_(beta2).addcmul_(1.0 - beta2, grad, grad)
+                denom = exp_avg_sq.sqrt().add_(group['eps'])
+
+                step_size = group['lr']
+                if group['correct_bias']:  # No bias correction for Bert
+                    bias_correction1 = 1.0 - beta1 ** state['step']
+                    bias_correction2 = 1.0 - beta2 ** state['step']
+                    step_size = step_size * math.sqrt(bias_correction2) / bias_correction1
+
+                p.data.addcdiv_(-step_size, exp_avg, denom)
+
+                if group['weight_decay'] > 0.0:
+                    p.data.add_(-group['lr'] * group['weight_decay'], p.data)
+
+        return loss
+
+
+def get_linear_schedule_with_warmup(optimizer, num_warmup_steps, num_training_steps, last_epoch=-1):
+    """ Create a schedule with a learning rate that decreases linearly after
+    linearly increasing during a warmup period.
+    """
+    def lr_lambda(current_step):
+        if current_step < num_warmup_steps:
+            return float(current_step) / float(max(1, num_warmup_steps))
+        return max(0.0, float(num_training_steps - current_step) / float(max(1, num_training_steps - num_warmup_steps)))
+
+    return LambdaLR(optimizer, lr_lambda, last_epoch)
