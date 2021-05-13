@@ -5,6 +5,7 @@ import sys
 import torch
 import math
 from torch import nn
+from torch.nn import CrossEntropyLoss
 from transformer.modeling import (
     ACT2FN,
     BertAttention,
@@ -39,11 +40,9 @@ logger = logging.getLogger(__name__)
 QUANT_WEIGHTS_NAME = "quant_pytorch_model.bin"
 
 QUANT_BERT_PRETRAINED_CONFIG_ARCHIVE_MAP = {
-    "bert-base-uncased":
-        "https://nlp-architect-data.s3-us-west-2.amazonaws.com/models/transformers/bert-base-uncased.json",
+    "bert-base-uncased": "https://nlp-architect-data.s3-us-west-2.amazonaws.com/models/transformers/bert-base-uncased.json",
     # noqa: E501
-    "bert-large-uncased":
-        "https://nlp-architect-data.s3-us-west-2.amazonaws.com/models/transformers/bert-large-uncased.json",
+    "bert-large-uncased": "https://nlp-architect-data.s3-us-west-2.amazonaws.com/models/transformers/bert-large-uncased.json",
     # noqa: E501
 }
 
@@ -87,7 +86,6 @@ def quantized_activation_setup(config, name, *args, **kwargs):
 class QuantizedBertConfig(BertConfig):
     pretrained_config_archive_map = QUANT_BERT_PRETRAINED_CONFIG_ARCHIVE_MAP
 
-    @classmethod
     def update(cls, new_dict):
         for key, value in new_dict.items():
             cls.__dict__[key] = value
@@ -151,13 +149,14 @@ class QuantizedBertSelfAttention(BertSelfAttention):
         key_layer = self.transpose_for_scores(mixed_key_layer)
         value_layer = self.transpose_for_scores(mixed_value_layer)
 
-        # where we did activation quantization#
+        # where we did activaltion quantization#
         ########################################
         query_layer = self.activation_query(query_layer)
         key_layer = self.activation_key(key_layer)
 
         # Take the dot product between "query" and "key" to get the raw attention scores.
-        attention_scores = torch.matmul(query_layer, key_layer.transpose(-1, -2))
+        attention_scores = torch.matmul(
+            query_layer, key_layer.transpose(-1, -2))
         attention_scores = attention_scores / math.sqrt(self.attention_head_size)
         # Apply the attention mask is (precomputed for all layers in BertModel forward() function)
         attention_scores = attention_scores + attention_mask
@@ -169,7 +168,7 @@ class QuantizedBertSelfAttention(BertSelfAttention):
         # seem a bit unusual, but is taken from the original Transformer paper.
         attention_probs = self.dropout(attention_probs)
 
-        # where we did activation quantization#
+        # where we did activaltion quantization#
         ###############################################
         attention_probs = self.activation_att_prob(attention_probs)
         value_layer = self.activation_value(value_layer)
@@ -454,7 +453,6 @@ class QuantizedBertModel(QuantizedBertPreTrainedModel, BertModel):
         }
         config.update(quant_config)
         config.update(bit_config)
-        # print(config)
         self.embeddings = QuantizedBertEmbeddings(config)
         self.encoder = QuantizedBertEncoder(config)
         self.pooler = QuantizedBertPooler(config)
@@ -466,11 +464,16 @@ class QuantizedBertForSequenceClassification(
     QuantizedBertPreTrainedModel, BertForSequenceClassification
 ):
     def __init__(self, config):
+        # we only want BertForQuestionAnswering init to run to avoid unnecessary
+        # initializations
         super(BertForSequenceClassification, self).__init__(config)
         self.num_labels = config.num_labels
 
         self.bert = QuantizedBertModel(config)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        # self.classifier = quantized_linear_setup(
+        #     config, "head", config.hidden_size, self.config.num_labels
+        # )
         self.classifier = nn.Linear(config.hidden_size, config.num_labels)
 
         self.apply(self.init_weights)
@@ -479,10 +482,31 @@ class QuantizedBertForSequenceClassification(
 
 class QuantizedBertForQuestionAnswering(QuantizedBertPreTrainedModel, BertForQuestionAnswering):
     def __init__(self, config):
+        # we only want BertForQuestionAnswering init to run to avoid unnecessary
+        # initializations
         super(BertForQuestionAnswering, self).__init__(config)
         self.num_labels = config.num_labels
 
         self.bert = QuantizedBertModel(config)
+        # self.qa_outputs = quantized_linear_setup(
+        #     config, "head", config.hidden_size, config.num_labels
+        # )
         self.qa_outputs = nn.Linear(config.hidden_size, config.num_labels)
 
         self.apply(self.init_weights)
+
+# Currently we delete BertForTokenClassification here because of using modeling.py, we will add this model in near
+# future
+# (TODO)
+# class QuantizedBertForTokenClassification(QuantizedBertPreTrainedModel, BertForTokenClassification):
+#     def __init__(self, config):
+#         super(BertForTokenClassification, self).__init__(config)
+#         self.num_labels = config.num_labels
+
+#         self.bert = QuantizedBertModel(config)
+#         self.dropout = nn.Dropout(config.hidden_dropout_prob)
+#         self.classifier = quantized_linear_setup(
+#             config, "head", config.hidden_size, config.num_labels
+#         )
+
+#         self.apply(self.init_weights)
