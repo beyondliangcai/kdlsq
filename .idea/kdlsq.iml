@@ -5,10 +5,11 @@
       <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lsq/transformers" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lsq/transformers/data" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lsqkd_glue/transformer" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lsqkd_glue" isTestSource="false" />
-      <sourceFolder url="file://$MODULE_DIR$/lsqkd_glue/Q8BertOptimizer" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/kdlsq_glue/transformer" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/kdlsq_glue" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/kdlsq_glue/Q8BertOptimizer" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/lsq" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/kdlsq_qa" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.7 (python37)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

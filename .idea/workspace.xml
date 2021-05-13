@@ -2,19 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a852e0f4-4ca5-4c2c-a0c0-333680a190dd" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/Q8BertOptimizer/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/Q8BertOptimizer/optimization.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/config.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/config_bit.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/quantization.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/quantized_bert.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/run_kdlsq.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/file_utils.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/modeling.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/optimization.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/tokenization.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
