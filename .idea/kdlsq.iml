@@ -5,6 +5,8 @@
       <sourceFolder url="file://$MODULE_DIR$" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/transformers" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/transformers/data" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lsqkd" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/lsqkd/transformer" isTestSource="false" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.7 (python37)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
