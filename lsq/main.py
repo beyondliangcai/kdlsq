@@ -7,10 +7,9 @@ import numpy as np
 import torch
 from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
-from transformers import BertConfig, BertTokenizer
 from sequence_classification import TransformerSequenceClassifier
-from glue_tasks import (convert_examples_to_features, max_seq_lengths,get_glue_task,output_modes,
-                        get_metric_fn,batch_sizes,get_metric_key,eval_steps)
+from lsq.glue_tasks import (convert_examples_to_features, max_seq_lengths, get_glue_task, output_modes,
+                            get_metric_fn, batch_sizes, get_metric_key, eval_steps)
 
 def set_seed(seed: int):
     random.seed(seed)
