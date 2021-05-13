@@ -21,11 +21,11 @@ from torch.utils.data import (DataLoader, RandomSampler, SequentialSampler,
                               TensorDataset)
 from torch.nn import CrossEntropyLoss, MSELoss
 
-from transformer.modeling import BertForQuestionAnswering
+from .transformer.modeling import BertForQuestionAnswering
 from quantized_bert import QuantizedBertForQuestionAnswering
-from transformer.tokenization import (BasicTokenizer, BertTokenizer, whitespace_tokenize)
-from transformer.optimization import BertAdam, AdamW, get_linear_schedule_with_warmup
-from transformer.file_utils import WEIGHTS_NAME, CONFIG_NAME
+from .transformer.tokenization import (BasicTokenizer, BertTokenizer, whitespace_tokenize)
+from .transformer.optimization import BertAdam, AdamW, get_linear_schedule_with_warmup
+from .transformer.file_utils import WEIGHTS_NAME, CONFIG_NAME
 from time import sleep
 
 csv.field_size_limit(sys.maxsize)
