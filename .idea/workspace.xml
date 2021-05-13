@@ -2,37 +2,20 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a852e0f4-4ca5-4c2c-a0c0-333680a190dd" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/lsq/__init__.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd/quantization.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/lsqkd/quantized_bert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/kdlsq.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/kdlsq.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/Q8BertOptimizer/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/Q8BertOptimizer/optimization.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/config.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/config_bit.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/quantization.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/quantized_bert.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/run_kdlsq.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/file_utils.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/modeling.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/optimization.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd_qa/transformer/tokenization.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/base_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/base_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/config.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/glue_tasks.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/glue_tasks.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/metrics.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/metrics.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/quantization.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/quantization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/quantized_bert.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/quantized_bert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/run_glue.sh" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/scripts/run_glue.sh" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sequence_classification.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/sequence_classification.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/configuration_bert.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/configuration_bert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/configuration_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/configuration_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/data/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/data/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/data/metrics/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/data/metrics/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/data/processors/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/data/processors/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/data/processors/glue.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/data/processors/glue.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/data/processors/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/data/processors/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/file_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/file_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/modeling_bert.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/modeling_bert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/modeling_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/modeling_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/optimization.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/optimization.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/tokenization_bert.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/tokenization_bert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/transformers/tokenization_utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/transformers/tokenization_utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils_squad.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/utils_squad.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils_squad_evaluate.py" beforeDir="false" afterPath="$PROJECT_DIR$/lsq/utils_squad_evaluate.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -65,6 +48,15 @@
     <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
   </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/lsq" />
+    </key>
+  </component>
   <component name="SvnConfiguration">
     <configuration />
   </component>
@@ -83,9 +75,9 @@
       <screen x="67" y="27" width="1853" height="1053" />
     </state>
     <state x="482" y="187" key="SettingsEditor/67.27.1853.1053@67.27.1853.1053" timestamp="1619578191117" />
-    <state x="641" y="162" width="704" height="780" key="find.popup" timestamp="1620875237843">
+    <state x="641" y="162" width="704" height="780" key="find.popup" timestamp="1620875333658">
       <screen x="67" y="27" width="1853" height="1053" />
     </state>
-    <state x="641" y="162" width="704" height="780" key="find.popup/67.27.1853.1053@67.27.1853.1053" timestamp="1620875237843" />
+    <state x="641" y="162" width="704" height="780" key="find.popup/67.27.1853.1053@67.27.1853.1053" timestamp="1620875333658" />
   </component>
 </project>
