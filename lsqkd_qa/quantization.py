@@ -26,69 +26,11 @@ from abc import ABC, abstractmethod
 import torch
 from torch import nn
 from torch.nn import functional as F
-import numpy as np
 
 from config import Config
 
 
 logger = logging.getLogger(__name__)
-
-def weight_quantization(b):
-
-    def uniform_quant(x, b):
-        xdiv = x.mul((2 ** b - 1))
-        xhard = xdiv.round().div(2 ** b - 1)
-        return xhard
-
-    class _pq(torch.autograd.Function):
-        @staticmethod
-        def forward(ctx, input, alpha):
-            input = input.div(alpha)                          # weights are first divided by alpha
-            input_c = input.clamp(min=-1, max=1)       # then clipped to [-1,1]
-            input_q = uniform_quant(input_c, b)
-            ctx.save_for_backward(input, input_q)
-            input_q = input_q.mul(alpha)               # rescale to the original range
-            return input_q
-
-        @staticmethod
-        def backward(ctx, grad_output):
-            grad_input = grad_output.clone()             # grad for weights will not be clipped
-            input, input_q = ctx.saved_tensors
-            i = (input.abs()>1.).float()
-            sign = input.sign()
-            grad_alpha = (grad_output*(sign*i + (input_q-input)*(1-i))).sum()
-            return grad_input, grad_alpha
-
-    return _pq().apply
-
-def act_quantization(b):
-
-    def uniform_quant(x, b=3):
-        xdiv = x.mul(2 ** b - 1)
-        xhard = xdiv.round().div(2 ** b - 1)
-        return xhard
-
-    class _uq(torch.autograd.Function):
-        @staticmethod
-        def forward(ctx, input, alpha):
-            input=input.div(alpha)
-            input_c = input.clamp(min=-1, max=1)
-            input_q = uniform_quant(input_c, b)
-            ctx.save_for_backward(input, input_q)
-            input_q = input_q.mul(alpha)
-            return input_q
-
-        @staticmethod
-        def backward(ctx, grad_output):
-            grad_input = grad_output.clone()
-            input, input_q = ctx.saved_tensors
-            i = (input.abs() > 1.).float()
-            sign = input.sign()
-            grad_alpha = (grad_output * (sign*i + (input_q - input) * (1 - i))).sum()
-            grad_input = grad_input*(1-i)
-            return grad_input, grad_alpha
-
-    return _uq().apply
 
 
 def get_dynamic_scale(x, bits, with_grad=False):
@@ -169,25 +111,19 @@ class QuantizedLayer(ABC):
         self._imported_from_quantized = False
         # register saving hook
         self._register_state_dict_hook(self._state_dict_hook)
-        # a flag for activation initilization
-        self.act_init_flag = False
 
     def forward(self, input):
-        # if self.mode == QuantizationMode.NONE:
-        #     return super().forward(input)
-        # if self.training:
-        #     if self._step >= self.start_step:
-        #         out = self.training_quantized_forward(input)
-        #     else:
-        #         out = super().forward(input)
-        #     self._step += 1
-        # else:
-        #     out = self.inference_quantized_forward(input)
         if self.mode == QuantizationMode.NONE:
             return super().forward(input)
-        else:   
-            return self.training_quantized_forward(input)
-        # return out
+        if self.training:
+            if self._step >= self.start_step:
+                out = self.training_quantized_forward(input)
+            else:
+                out = super().forward(input)
+            self._step += 1
+        else:
+            out = self.inference_quantized_forward(input)
+        return out
 
     @abstractmethod
     def training_quantized_forward(self, input):
@@ -264,9 +200,6 @@ class QuantizedLayer(ABC):
         else:
             state_dict.pop(prefix + "quantized_weight", None)
             state_dict.pop(prefix + "_weight_scale", None)
-        # state_dict.pop(prefix + "weight", None)
-        # state_dict.pop(prefix + "_step", None)
-        # state_dict[prefix + "quantized_weight"] = state_dict[prefix + "quantized_weight"].char()
 
     def extra_repr(self):
         s = ""
@@ -307,161 +240,25 @@ class QuantizedLinear(QuantizedLayer, nn.Linear):
         if kwargs.get("bias", True):
             self.register_buffer("_quantized_bias", None)
             self.register_buffer("bias_scale", None)
-        
-        # self.weight_bits = 8.0
-        self.weight_quant = weight_quantization(b=self.weight_bits - 1.0)
-        deviceId = torch.cuda.current_device()
-        self.wgt_alpha = torch.nn.Parameter(torch.tensor(4.0, dtype=torch.float32, device=torch.device('cuda:{}'.format(deviceId))))
-        self.act_quant = act_quantization(b=self.activation_bits - 1.0)
-        self.act_alpha = torch.nn.Parameter(torch.tensor(16.0, dtype=torch.float32, device=torch.device('cuda:{}'.format(deviceId))))
-
-    def reset_wgt_alpha(self):
-        scaled_weight = self.weight.mul(1.0).reshape([-1, 1, 1, 1])
-
-        # dim = scaled_weight.dim()
-        num_elem = scaled_weight.nelement()
-        numpy_weight = scaled_weight.detach().cpu().reshape(-1).numpy()
-        sorted_weight = np.sort(numpy_weight)
-        min_index = np.int(np.around(num_elem * 0.025))
-        max_index = num_elem - min_index
-        result = 0.0
-        if np.abs(sorted_weight[min_index]) >= np.abs(sorted_weight[max_index]):
-           result = np.abs(sorted_weight[min_index])
-        else:
-            result = np.abs(sorted_weight[max_index])
-        self.wgt_alpha.data.fill_(result * 1.0)
-        return self
-
-    def kl_divergence_activation(self, input):
-        scaled_weight = input.mul(1.0).reshape([-1, 1, 1, 1])
-        scaled_weight_npy = scaled_weight.detach().cpu().numpy()
-        bitwidth = self.activation_bits
-        mn = 0
-        mx = np.abs(scaled_weight_npy).max()
-        if np.isclose(mx, 0.0):
-            return 0.0
-        hist, bin_edges = np.histogram(np.abs(scaled_weight_npy), bins='sqrt', range=(mn, mx), density=True)
-        hist = hist / np.sum(hist)
-        cumsum = np.cumsum(hist)
-        n = pow(2, int(bitwidth) - 1)
-        threshold = []
-        scaling_factor = []
-        d = []
-        if n + 1 > len(bin_edges) - 1:
-            th_layer_out = bin_edges[-1]
-            # sf_layer_out = th_layer_out / (pow(2, bitwidth - 1) - 1)
-            return float(th_layer_out)
-        for i in range(n + 1, len(bin_edges), 1):
-            threshold_tmp = (i + 0.5) * (bin_edges[1] - bin_edges[0])
-            threshold = np.concatenate((threshold, [threshold_tmp]))
-            scaling_factor_tmp = threshold_tmp / (pow(2, bitwidth - 1) - 1)
-            scaling_factor = np.concatenate((scaling_factor, [scaling_factor_tmp]))
-            p = np.copy(cumsum)
-            p[(i - 1):] = 1
-            x = np.linspace(0.0, 1.0, n)
-            xp = np.linspace(0.0, 1.0, i)
-            fp = p[:i]
-            p_interp = np.interp(x, xp, fp)
-            x = np.linspace(0.0, 1.0, i)
-            xp = np.linspace(0.0, 1.0, n)
-            fp = p_interp
-            q_interp = np.interp(x, xp, fp)
-            q = np.copy(p)
-            q[:i] = q_interp
-            d_tmp = np.sum((cumsum - q) * np.log2(cumsum / q))  # Kullback-Leibler-J
-            d = np.concatenate((d, [d_tmp]))
-
-        th_layer_out = threshold[np.argmin(d)]
-        # sf_layer_out = scaling_factor[np.argmin(d)]
-        threshold = float(th_layer_out)
-        return threshold
-
-    def kl_divergence_initilization(self):
-        scaled_weight = self.weight.mul(1.0).reshape([-1, 1, 1, 1])
-        scaled_weight_npy = scaled_weight.detach().cpu().numpy()
-        bitwidth = self.weight_bits
-        mn = 0
-        mx = np.abs(scaled_weight_npy).max()
-        if np.isclose(mx, 0.0):
-            return 0.0
-        hist, bin_edges = np.histogram(np.abs(scaled_weight_npy), bins='sqrt', range=(mn, mx), density=True)
-        hist = hist / np.sum(hist)
-        cumsum = np.cumsum(hist)
-        n = pow(2, int(bitwidth) - 1)
-        threshold = []
-        scaling_factor = []
-        d = []
-        if n + 1 > len(bin_edges) - 1:
-            th_layer_out = bin_edges[-1]
-            # sf_layer_out = th_layer_out / (pow(2, bitwidth - 1) - 1)
-            return float(th_layer_out)
-        for i in range(n + 1, len(bin_edges), 1):
-            threshold_tmp = (i + 0.5) * (bin_edges[1] - bin_edges[0])
-            threshold = np.concatenate((threshold, [threshold_tmp]))
-            scaling_factor_tmp = threshold_tmp / (pow(2, bitwidth - 1) - 1)
-            scaling_factor = np.concatenate((scaling_factor, [scaling_factor_tmp]))
-            p = np.copy(cumsum)
-            p[(i - 1):] = 1
-            x = np.linspace(0.0, 1.0, n)
-            xp = np.linspace(0.0, 1.0, i)
-            fp = p[:i]
-            p_interp = np.interp(x, xp, fp)
-            x = np.linspace(0.0, 1.0, i)
-            xp = np.linspace(0.0, 1.0, n)
-            fp = p_interp
-            q_interp = np.interp(x, xp, fp)
-            q = np.copy(p)
-            q[:i] = q_interp
-            d_tmp = np.sum((cumsum - q) * np.log2(cumsum / q))  # Kullback-Leibler-J
-            d = np.concatenate((d, [d_tmp]))
-
-        th_layer_out = threshold[np.argmin(d)]
-        # sf_layer_out = scaling_factor[np.argmin(d)]
-        threshold = float(th_layer_out)
-        self.wgt_alpha.data.fill_(threshold * 1.0)
-        return self
 
     def training_quantized_forward(self, input):
         """fake quantized forward, fake quantizes weights and activations,
         learn quantization ranges if quantization mode is EMA.
         This function should only be used while training"""
-        # assert self.training, "should only be called when training"
-        # if self.mode == QuantizationMode.EMA:
-        #     self._update_ema(self.input_thresh, input.detach())
-        # input_scale = self._get_input_scale(input)
-        # out = F.linear(
-        #     _fake_quantize(input, input_scale, self.activation_bits),
-        #     self.fake_quantized_weight,
-        #     self.bias,
-        # )
-        # if self.requantize_output:
-        #     if self.mode == QuantizationMode.EMA:
-        #         self._update_ema(self.output_thresh, out.detach())
-        #     out = _fake_quantize(out, self._get_output_scale(out), self.activation_bits)
-        if not self.act_init_flag:
-            #  weight = self.weight.mul(1.0)
-            #  weight_q = self.weight_quant(weight, self.wgt_alpha)
-             weight_q = self.weight_quant(self.weight, self.wgt_alpha)
-             input_q = self.act_quant(input, self.act_alpha)
-             return F.linear(
-              input_q,
-              weight_q,
-              self.bias,
-             )
-        else:
-            #  weight = self.weight.mul(1.0)
-            #  weight_q = self.weight_quant(weight, self.wgt_alpha)
-             weight_q = self.weight_quant(self.weight, self.wgt_alpha)
-             threshold = self.kl_divergence_activation(input)
-             self.act_alpha.data.fill_(threshold * 1.0)
-             # print("activation alpha_1: ", self.act_alpha)
-             input_q = self.act_quant(input, self.act_alpha)
-             return F.linear(
-              input_q,
-              weight_q,
-              self.bias,
-             )
-
+        assert self.training, "should only be called when training"
+        if self.mode == QuantizationMode.EMA:
+            self._update_ema(self.input_thresh, input.detach())
+        input_scale = self._get_input_scale(input)
+        out = F.linear(
+            _fake_quantize(input, input_scale, self.activation_bits),
+            self.fake_quantized_weight,
+            self.bias,
+        )
+        if self.requantize_output:
+            if self.mode == QuantizationMode.EMA:
+                self._update_ema(self.output_thresh, out.detach())
+            out = _fake_quantize(out, self._get_output_scale(out), self.activation_bits)
+        return out
 
     def inference_quantized_forward(self, input):
         """Simulate quantized inference. quantize input and perform calculation with only integer numbers.
@@ -545,32 +342,13 @@ class QuantizedLinear(QuantizedLayer, nn.Linear):
 
 class QuantizedEmbedding(QuantizedLayer, nn.Embedding):
     """Embedding layer with quantization aware training capability"""
-    def __init__(
-            self, *args, activation_bits=8, ema_decay=0.9999, **kwargs
-    ):
-        super().__init__(*args, **kwargs)
-        self.weight_quant = weight_quantization(b=self.weight_bits - 1.0)
-        deviceId = torch.cuda.current_device()
-        self.wgt_alpha = torch.nn.Parameter(torch.tensor(4.0, dtype=torch.float32, device=torch.device('cuda:{}'.format(deviceId))))
 
     def training_quantized_forward(self, input):
         """Return quantized embeddings"""
-        # assert self.training, "should only be called when training"
-        # return F.embedding(
-        #     input,
-        #     self.fake_quantized_weight,
-        #     self.padding_idx,
-        #     self.max_norm,
-        #     self.norm_type,
-        #     self.scale_grad_by_freq,
-        #     self.sparse,
-        # )
-        # weight = self.weight.mul(1.0)
-        # weight_q = self.weight_quant(weight, self.wgt_alpha)
-        weight_q = self.weight_quant(self.weight, self.wgt_alpha)
+        assert self.training, "should only be called when training"
         return F.embedding(
             input,
-            weight_q,
+            self.fake_quantized_weight,
             self.padding_idx,
             self.max_norm,
             self.norm_type,
@@ -591,51 +369,6 @@ class QuantizedEmbedding(QuantizedLayer, nn.Embedding):
             self.sparse,
         )
         return dequantize(q_embeddings, self.weight_scale)
-
-    def kl_divergence_initilization(self):
-        scaled_weight = self.weight.mul(1.0).reshape([-1, 1, 1, 1])
-        scaled_weight_npy = scaled_weight.detach().cpu().numpy()
-        bitwidth = self.weight_bits
-        mn = 0
-        mx = np.abs(scaled_weight_npy).max()
-        if np.isclose(mx, 0.0):
-            return 0.0
-        hist, bin_edges = np.histogram(np.abs(scaled_weight_npy), bins='sqrt', range=(mn, mx), density=True)
-        hist = hist / np.sum(hist)
-        cumsum = np.cumsum(hist)
-        n = pow(2, int(bitwidth) - 1)
-        threshold = []
-        scaling_factor = []
-        d = []
-        if n + 1 > len(bin_edges) - 1:
-            th_layer_out = bin_edges[-1]
-            # sf_layer_out = th_layer_out / (pow(2, bitwidth - 1) - 1)
-            return float(th_layer_out)
-        for i in range(n + 1, len(bin_edges), 1):
-            threshold_tmp = (i + 0.5) * (bin_edges[1] - bin_edges[0])
-            threshold = np.concatenate((threshold, [threshold_tmp]))
-            scaling_factor_tmp = threshold_tmp / (pow(2, bitwidth - 1) - 1)
-            scaling_factor = np.concatenate((scaling_factor, [scaling_factor_tmp]))
-            p = np.copy(cumsum)
-            p[(i - 1):] = 1
-            x = np.linspace(0.0, 1.0, n)
-            xp = np.linspace(0.0, 1.0, i)
-            fp = p[:i]
-            p_interp = np.interp(x, xp, fp)
-            x = np.linspace(0.0, 1.0, i)
-            xp = np.linspace(0.0, 1.0, n)
-            fp = p_interp
-            q_interp = np.interp(x, xp, fp)
-            q = np.copy(p)
-            q[:i] = q_interp
-            d_tmp = np.sum((cumsum - q) * np.log2(cumsum / q))  # Kullback-Leibler-J
-            d = np.concatenate((d, [d_tmp]))
-
-        th_layer_out = threshold[np.argmin(d)]
-        # sf_layer_out = scaling_factor[np.argmin(d)]
-        threshold = float(th_layer_out)
-        self.wgt_alpha.data.fill_(threshold * 1.0)
-        return self
 
 
 class QuantizedActivation(QuantizedLayer, nn.Module):
@@ -660,68 +393,15 @@ class QuantizedActivation(QuantizedLayer, nn.Module):
         self.accumulation_bits = 32
         self.ema_decay = ema_decay
         self.register_buffer("input_thresh", torch.zeros(1))
-        deviceId = torch.cuda.current_device()
-        self.act_quant = act_quantization(b=self.activation_bits - 1.0)
-        self.act_alpha = torch.nn.Parameter(torch.tensor(16.0, dtype=torch.float32, device=torch.device('cuda:{}'.format(deviceId))))
-
-    def kl_divergence_activation(self, input):
-        scaled_weight = input.mul(1.0).reshape([-1, 1, 1, 1])
-        scaled_weight_npy = scaled_weight.detach().cpu().numpy()
-        bitwidth = self.activation_bits
-        mn = 0
-        mx = np.abs(scaled_weight_npy).max()
-        if np.isclose(mx, 0.0):
-            return 0.0
-        hist, bin_edges = np.histogram(np.abs(scaled_weight_npy), bins='sqrt', range=(mn, mx), density=True)
-        hist = hist / np.sum(hist)
-        cumsum = np.cumsum(hist)
-        n = pow(2, int(bitwidth) - 1)
-        threshold = []
-        scaling_factor = []
-        d = []
-        if n + 1 > len(bin_edges) - 1:
-            th_layer_out = bin_edges[-1]
-            # sf_layer_out = th_layer_out / (pow(2, bitwidth - 1) - 1)
-            return float(th_layer_out)
-        for i in range(n + 1, len(bin_edges), 1):
-            threshold_tmp = (i + 0.5) * (bin_edges[1] - bin_edges[0])
-            threshold = np.concatenate((threshold, [threshold_tmp]))
-            scaling_factor_tmp = threshold_tmp / (pow(2, bitwidth - 1) - 1)
-            scaling_factor = np.concatenate((scaling_factor, [scaling_factor_tmp]))
-            p = np.copy(cumsum)
-            p[(i - 1):] = 1
-            x = np.linspace(0.0, 1.0, n)
-            xp = np.linspace(0.0, 1.0, i)
-            fp = p[:i]
-            p_interp = np.interp(x, xp, fp)
-            x = np.linspace(0.0, 1.0, i)
-            xp = np.linspace(0.0, 1.0, n)
-            fp = p_interp
-            q_interp = np.interp(x, xp, fp)
-            q = np.copy(p)
-            q[:i] = q_interp
-            d_tmp = np.sum((cumsum - q) * np.log2(cumsum / q))  # Kullback-Leibler-J
-            d = np.concatenate((d, [d_tmp]))
-
-        th_layer_out = threshold[np.argmin(d)]
-        # sf_layer_out = scaling_factor[np.argmin(d)]
-        threshold = float(th_layer_out)
-        return threshold
 
     def training_quantized_forward(self, input):
         """Return quantized activation"""
-        # assert self.training, "should only be called when training"
-        # if self.mode == QuantizationMode.EMA:
-        #     self._update_ema(self.input_thresh, input.detach())
-        # input_scale = self._get_input_scale(input)
-        # activation_out = _fake_quantize(input, input_scale, self.activation_bits)
-        if not self.act_init_flag:
-            return self.act_quant(input, self.act_alpha)
-        else: 
-            threshold = self.kl_divergence_activation(input)
-            self.act_alpha.data.fill_(threshold * 1.0)
-            # print("activation alpha_2: ", self.act_alpha)
-            return self.act_quant(input, self.act_alpha)       
+        assert self.training, "should only be called when training"
+        if self.mode == QuantizationMode.EMA:
+            self._update_ema(self.input_thresh, input.detach())
+        input_scale = self._get_input_scale(input)
+        activation_out = _fake_quantize(input, input_scale, self.activation_bits)
+        return activation_out
 
     def inference_quantized_forward(self, input):
         """forward to be used during inference"""
@@ -758,22 +438,6 @@ class QuantizedActivation(QuantizedLayer, nn.Module):
         else:
             ema.sub_((1 - self.ema_decay) * (ema - reduce_fn(input)))
 
-# we use this function before training
-def reset_wgt_alpha(mod):
-    if type(mod) in set([QuantizedLinear]):
-       mod.reset_wgt_alpha()
-# we use this function before training
-def kl_divergence_initilization(mod):
-    if type(mod) in set([QuantizedLinear, QuantizedEmbedding]):
-       mod.kl_divergence_initilization()
-# we use this function when doing inference before training
-def reset_act_alpha_true(mod):
-    if type(mod) in set([QuantizedLinear, QuantizedActivation]):
-       mod.act_init_flag = True
-
-def reset_act_alpha_false(mod):
-    if type(mod) in set([QuantizedLinear, QuantizedActivation]):
-       mod.act_init_flag = False
 
 class QuantizationConfig(Config):
     """Quantization Configuration Object"""
