@@ -397,7 +397,7 @@ class QuantizedBertPreTrainedModel(BertPreTrainedModel):
         model_to_save = self.module if hasattr(self, "module") else self
         model_to_save.toggle_8bit(True)
         output_model_file = os.path.join(save_directory, QUANT_WEIGHTS_NAME)
-        logger.info("Saving the 8 bit model!")
+        logger.info("Saving model!")
         torch.save(model_to_save.state_dict(), output_model_file)
         model_to_save.toggle_8bit(False)
 

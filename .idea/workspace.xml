@@ -2,8 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="a852e0f4-4ca5-4c2c-a0c0-333680a190dd" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/lsqkd/__init__.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/lsqkd/run_kdlsq.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/quantized_bert.py" beforeDir="false" afterPath="$PROJECT_DIR$/quantized_bert.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/scripts/run_glue.sh" beforeDir="false" afterPath="$PROJECT_DIR$/scripts/run_glue.sh" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
