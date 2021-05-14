@@ -1327,9 +1327,8 @@ if __name__ == "__main__":
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
     from config_bit import bit_config
 
-    # my_model_dir = '/mnt/sdb4/tcwu/model_save/nlp/ternary_bert/finetuned_teacher/'
-    my_model_dir = '/mnt/sdb4/tcwu/model_save/nlp/tinybert_models/6L_768D_FinalModel/'
-    my_data_dir = '/mnt/sdb4/tcwu/datasets/nlp_data/'
+    my_model_dir = 'finetuned_teacher/'
+    my_data_dir = 'lp_data/'
 
     bit_list = [5, 6]
     kd_list = [True]

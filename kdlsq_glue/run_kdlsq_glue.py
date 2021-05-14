@@ -1230,8 +1230,8 @@ def main(task_name='', new_kd=False, print_log=True, data_dir='', model_dir=''):
 if __name__ == "__main__":
     from config_bit import bit_config
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-    data_dir = '/mnt/sdb4/tcwu/datasets/nlp_data/'
-    model_dir = '/mnt/sdb4/tcwu/model_save/nlp/ternary_bert/finetuned_teacher/'
+    data_dir = 'nlp_data/'
+    model_dir = 'finetuned_teacher/'
     
     task_list = ['mnli', 'cola', 'mrpc', 'qnli', 'rte', 'sst-2', 'sts-b']
     bit_list = [3]
